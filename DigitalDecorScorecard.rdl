@@ -6,7 +6,6 @@
       <ConnectionProperties>
         <DataProvider>SQL</DataProvider>
         <ConnectString>Data Source=WAPRCN026A;Initial Catalog=IDMZendesk</ConnectString>
-        <Prompt>Enter a user name and password to access the data source:</Prompt>
       </ConnectionProperties>
       <rd:SecurityType>Windows</rd:SecurityType>
       <rd:DataSourceID>3bd82d5e-650b-402c-bd6e-b4b26a7aa966</rd:DataSourceID>
@@ -16,74 +15,354 @@
     <DataSet Name="ProductStatsbyDept">
       <Query>
         <DataSourceName>DCADashboard</DataSourceName>
-        <CommandText>SELECT        DCA.dept, DCA.CLASS_NUMBER, DCA.CLASS_NAME, COUNT(*) AS [TOTAL ITEMS], SUM(CASE WHEN [Product Brand Name] &lt;&gt; 'UNBRANDED' THEN 1 ELSE 0 END) 
-                         AS [NO. OF ITEMS WITH BRAND], SUM(CASE WHEN S10.PRODUCT_HIGHLIGHT_1 IS NOT NULL OR
-                         S10.PRODUCT_HIGHLIGHT_2 IS NOT NULL OR
-                         S10.PRODUCT_HIGHLIGHT_3 IS NOT NULL THEN 1 ELSE 0 END) AS [NO. ITEMS W/ SALIENT BULLETS], SUM(CASE WHEN CAST([NUMBER OF ALT IMAGES] AS INT) 
-                         &gt;= 3 THEN 1 ELSE 0 END) AS [# ITEMS W/ &gt;= 3 ALT IMAGES], SUM(CASE WHEN CAST([NUMBER OF ALT IMAGES] AS INT) &gt; 0 THEN 1 ELSE 0 END) 
-                         AS [# ITEMS W/ &gt; 0 ALT IMAGES], SUM(CASE WHEN [COLLECTION (SEGMENTS)] = 'Has Collection SKU' THEN 1 ELSE 0 END) AS [NO. ITEMS WITH COLLECTIONS], 
-                         SUM(CASE WHEN [ACCESSORY (SEGMENTS)] = 'Has Accessory' THEN 1 ELSE 0 END) AS [NO. ITEMS WITH ACCESSORIES], 
-                         SUM(CASE WHEN [cordinating (segments)] = 'Has Cordinating SKU' THEN 1 ELSE 0 END) AS [NO. ITEMS WITH COORDINATING ITEMS], 
-                         SUM(CASE WHEN CAST([HAS_A_REVIEW] AS INT) = 1 THEN 1 ELSE 0 END) AS [NO. ITEMS WITH REVIEWS], 
-                         SUM(CASE WHEN [SHOW AS SSKU ON WEB] = 'Y' THEN 1 ELSE 0 END) AS [NO. ITEMS SUPER SKUD]
-FROM            [DCA Dashboard].dbo.tran_tbl_ScoringMultiplier_SKU_Source AS DCA LEFT OUTER JOIN
-                         STEP_MVIEWS.dbo.SCORECARD10 AS S10 ON S10.OMSID = DCA.[product oms sku]
-WHERE        ((DCA.dept + '/' + DCA.CLASS_NUMBER) IN ('29/28', '29/62', '59/6', '59/34', '59/35'))
-GROUP BY DCA.dept, DCA.CLASS_NUMBER, DCA.CLASS_NAME
-ORDER BY CAST(DCA.dept AS INT), CAST(DCA.CLASS_NUMBER AS INT)</CommandText>
+        <CommandText>if object_id('tempdb..#start', 'u') is not null
+	drop table #start
+
+if object_id('tempdb..#now', 'u') is not null
+	drop table #now
+
+-- insert results into #start table
+select        
+	dca.dept, 
+	dca.class_number, 
+	count(*) as [total items], 
+	sum(case 
+			when [product brand name] &lt;&gt; 'unbranded' 
+				then 1 
+			else 0
+		end) as brand, 
+	sum(case 
+			when s10.product_highlight_1 is not null 
+				or s10.product_highlight_2 is not null 
+				or s10.product_highlight_3 is not null 
+				then 1 
+			else 0 
+		end) as salientBullets, 
+	sum(case 
+			when cast([number of alt images] as int) &gt;= 3 
+				then 1 
+			else 0 
+		end) as threeAltImages, 
+	sum(case 
+			when cast([number of alt images] as int) &gt; 0 
+				then 1 
+			else 0 
+		end) as gtZeroAltImages, 
+	sum(case 
+			when [collection (segments)] = 'has collection sku' 
+				then 1 
+			else 0 
+		end) as collections, 
+	sum(case 
+			when [accessory (segments)] = 'has accessory' 
+				then 1 
+			else 0 
+		end) as accessories, 
+    sum(case 
+			when [cordinating (segments)] = 'has cordinating sku' 
+				then 1 
+			else 0 
+		end) as coordItems, 
+    sum(case 
+		when [count of reviews] &gt; 0
+			then 1
+		else 0
+	end) as reviews, 
+	sum(case 
+			when [show as ssku on web] = 'y' 
+				then 1 
+			else 0 
+		end) as ssku
+into #start
+from [dataAnalysis].[dbo].[bxs_DCASnapshot7_31_16] as dca 
+	left outer join	step_mviews.dbo.scorecard10 as s10 
+		on s10.omsid = dca.[product oms sku]
+where ((dca.dept + '/' + dca.class_number) 
+	in ('29/28', '29/62', '59/6', '59/34', '59/35'))
+group by dca.dept, dca.class_number
+order by cast(dca.dept as int), cast(dca.class_number as int)
+
+
+-- insert results into #now table
+select        
+	dca.dept, 
+	dca.class_number, 
+	dca.class_name, 
+	count(*) as [total items], 
+	sum(case 
+			when [product brand name] &lt;&gt; 'unbranded' 
+				then 1 
+			else 0
+		end) as brand, 
+	sum(case 
+			when s10.product_highlight_1 is not null 
+				or s10.product_highlight_2 is not null 
+				or s10.product_highlight_3 is not null 
+				then 1 
+			else 0 
+		end) as salientBullets, 
+	sum(case 
+			when cast([number of alt images] as int) &gt;= 3 
+				then 1 
+			else 0 
+		end) as threeAltImages, 
+	sum(case 
+			when cast([number of alt images] as int) &gt; 0 
+				then 1 
+			else 0 
+		end) as gtZeroAltImages, 
+	sum(case 
+			when [collection (segments)] = 'has collection sku' 
+				then 1 
+			else 0 
+		end) as collections, 
+	sum(case 
+			when [accessory (segments)] = 'has accessory' 
+				then 1 
+			else 0 
+		end) as accessories, 
+    sum(case 
+			when [cordinating (segments)] = 'has cordinating sku' 
+				then 1 
+			else 0 
+		end) as coordItems, 
+    sum(case 
+			when cast([has_a_review] as int) = 1 
+				then 1 
+			else 0 
+		end) as reviews, 
+	sum(case 
+			when [show as ssku on web] = 'y' 
+				then 1 
+			else 0 
+		end) as ssku
+into #now
+from [dca dashboard].dbo.tran_tbl_scoringmultiplier_sku_source as dca 
+	left outer join	step_mviews.dbo.scorecard10 as s10 
+		on s10.omsid = dca.[product oms sku]
+where ((dca.dept + '/' + dca.class_number) 
+	in ('29/28', '29/62', '59/6', '59/34', '59/35'))
+group by dca.dept, dca.class_number, dca.class_name
+order by cast(dca.dept as int), cast(dca.class_number as int)
+
+--combine above temp tables
+
+select
+	
+	#now.[total items] [TOTAL ITEMS],
+	#now.DEPT,
+	#now.CLASS_NAME,
+	#now.CLASS_NUMBER,
+
+	-- percent increase 
+	(cast(#now.brand as float)/#now.[total items]) - (cast(#start.brand as float)/#start.[total items]) [brandPerc],
+	(cast(#now.salientBullets as float)/#now.[total items]) - (cast(#start.salientBullets as float)/#start.[total items]) [salientBulletsPerc],
+	(cast(#now.threeAltImages as float)/#now.[total items]) - (cast(#start.threeAltImages as float)/#start.[total items]) [threeAltImagesPerc],
+	(cast(#now.gtZeroAltImages as float)/#now.[total items]) - (cast(#start.gtZeroAltImages as float)/#start.[total items]) [gtZeroAltImagesPerc],
+	(cast(#now.collections as float)/#now.[total items]) - (cast(#start.collections as float)/#start.[total items]) [collectionsPerc],
+	(cast(#now.accessories as float)/#now.[total items]) - (cast(#start.accessories as float)/#start.[total items]) [accessoriesPerc],
+	(cast(#now.coordItems as float)/#now.[total items]) - (cast(#start.coordItems as float)/#start.[total items]) [coordItemsPerc],
+	(cast(#now.reviews as float)/#now.[total items]) - (cast(#start.reviews as float)/#start.[total items]) [reviewsPerc],
+	(cast(#now.ssku as float)/#now.[total items]) - (cast(#start.ssku as float)/#start.[total items]) [sskuPerc],
+
+	--numeric increase
+	#now.brand - #start.brand [brandNumInc],
+	#now.salientBullets - #start.salientBullets [salientBulletsNumInc],
+	#now.threeAltImages - #start.threeAltImages [threeAltImagesNumInc],
+	#now.gtZeroAltImages - #start.gtZeroAltImages [gtZeroAltImagesNumInc],
+	#now.collections - #start.collections [collectionsNumInc],
+	#now.accessories - #start.accessories [accessoriesNumInc],
+	#now.coordItems - #start.coordItems [coordItemsNumInc],
+	#now.reviews - #start.reviews [reviewsNumInc],
+	#now.ssku - #start.ssku [sskuNumInc],
+
+	-- #now values
+	#now.brand [brand_now],
+	#now.salientBullets [salientBullets_now],
+	#now.threeAltImages [threeAltImages_now],
+	#now.gtZeroAltImages [gtZeroAltImages_now],
+	#now.collections [collections_now],
+	#now.accessories [accessories_now],
+	#now.coordItems [coordItems_now],
+	#now.reviews [reviews_now],
+	#now.ssku [ssku_now],
+
+	--#start values
+	#start.brand [brand_start],
+	#start.salientBullets [salientBullets_start],
+	#start.threeAltImages [threeAltImages_start],
+	#start.gtZeroAltImages [gtZeroAltImages_start],
+	#start.collections [collections_start],
+	#start.accessories [accessories_start],
+	#start.coordItems [coordItems_start],
+	#start.reviews [reviews_start],
+	#start.ssku [ssku_start]
+
+from #start
+	full outer join #now
+		on #now.dept = #start.dept
+			and #start.class_number = #now.class_number</CommandText>
         <Timeout>180</Timeout>
       </Query>
       <Fields>
         <Field Name="DEPT">
-          <DataField>dept</DataField>
+          <DataField>DEPT</DataField>
           <rd:TypeName>System.String</rd:TypeName>
         </Field>
         <Field Name="CLASS_NUMBER">
           <DataField>CLASS_NUMBER</DataField>
           <rd:TypeName>System.String</rd:TypeName>
         </Field>
-        <Field Name="ID__ITEMS_W_____3_ALT_IMAGES">
-          <DataField># ITEMS W/ &gt;= 3 ALT IMAGES</DataField>
-          <rd:TypeName>System.Int32</rd:TypeName>
-        </Field>
         <Field Name="CLASS_NAME">
           <DataField>CLASS_NAME</DataField>
           <rd:TypeName>System.String</rd:TypeName>
         </Field>
-        <Field Name="NO__ITEMS_W__SALIENT_BULLETS">
-          <DataField>NO. ITEMS W/ SALIENT BULLETS</DataField>
-          <rd:TypeName>System.Int32</rd:TypeName>
+        <Field Name="brandPerc">
+          <DataField>brandPerc</DataField>
+          <rd:TypeName>System.Double</rd:TypeName>
         </Field>
-        <Field Name="NO__OF_ITEMS_WITH_BRAND">
-          <DataField>NO. OF ITEMS WITH BRAND</DataField>
-          <rd:TypeName>System.Int32</rd:TypeName>
+        <Field Name="salientBulletsPerc">
+          <DataField>salientBulletsPerc</DataField>
+          <rd:TypeName>System.Double</rd:TypeName>
+        </Field>
+        <Field Name="threeAltImagesPerc">
+          <DataField>threeAltImagesPerc</DataField>
+          <rd:TypeName>System.Double</rd:TypeName>
         </Field>
         <Field Name="TOTAL_ITEMS">
           <DataField>TOTAL ITEMS</DataField>
           <rd:TypeName>System.Int32</rd:TypeName>
         </Field>
-        <Field Name="ID__ITEMS_W____0_ALT_IMAGES">
-          <DataField># ITEMS W/ &gt; 0 ALT IMAGES</DataField>
+        <Field Name="gtZeroAltImagesPerc">
+          <DataField>gtZeroAltImagesPerc</DataField>
+          <rd:TypeName>System.Double</rd:TypeName>
+        </Field>
+        <Field Name="collectionsPerc">
+          <DataField>collectionsPerc</DataField>
+          <rd:TypeName>System.Double</rd:TypeName>
+        </Field>
+        <Field Name="accessoriesPerc">
+          <DataField>accessoriesPerc</DataField>
+          <rd:TypeName>System.Double</rd:TypeName>
+        </Field>
+        <Field Name="coordItemsPerc">
+          <DataField>coordItemsPerc</DataField>
+          <rd:TypeName>System.Double</rd:TypeName>
+        </Field>
+        <Field Name="reviewsPerc">
+          <DataField>reviewsPerc</DataField>
+          <rd:TypeName>System.Double</rd:TypeName>
+        </Field>
+        <Field Name="sskuPerc">
+          <DataField>sskuPerc</DataField>
+          <rd:TypeName>System.Double</rd:TypeName>
+        </Field>
+        <Field Name="brandNumInc">
+          <DataField>brandNumInc</DataField>
           <rd:TypeName>System.Int32</rd:TypeName>
         </Field>
-        <Field Name="NO__ITEMS_WITH_COLLECTIONS">
-          <DataField>NO. ITEMS WITH COLLECTIONS</DataField>
+        <Field Name="salientBulletsNumInc">
+          <DataField>salientBulletsNumInc</DataField>
           <rd:TypeName>System.Int32</rd:TypeName>
         </Field>
-        <Field Name="NO__ITEMS_WITH_ACCESSORIES">
-          <DataField>NO. ITEMS WITH ACCESSORIES</DataField>
+        <Field Name="threeAltImagesNumInc">
+          <DataField>threeAltImagesNumInc</DataField>
           <rd:TypeName>System.Int32</rd:TypeName>
         </Field>
-        <Field Name="NO__ITEMS_WITH_COORDINATING_ITEMS">
-          <DataField>NO. ITEMS WITH COORDINATING ITEMS</DataField>
+        <Field Name="gtZeroAltImagesNumInc">
+          <DataField>gtZeroAltImagesNumInc</DataField>
           <rd:TypeName>System.Int32</rd:TypeName>
         </Field>
-        <Field Name="NO__ITEMS_WITH_REVIEWS">
-          <DataField>NO. ITEMS WITH REVIEWS</DataField>
+        <Field Name="collectionsNumInc">
+          <DataField>collectionsNumInc</DataField>
           <rd:TypeName>System.Int32</rd:TypeName>
         </Field>
-        <Field Name="NO__ITEMS_SUPER_SKUD">
-          <DataField>NO. ITEMS SUPER SKUD</DataField>
+        <Field Name="accessoriesNumInc">
+          <DataField>accessoriesNumInc</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="coordItemsNumInc">
+          <DataField>coordItemsNumInc</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="reviewsNumInc">
+          <DataField>reviewsNumInc</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="sskuNumInc">
+          <DataField>sskuNumInc</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="brand_now">
+          <DataField>brand_now</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="salientBullets_now">
+          <DataField>salientBullets_now</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="threeAltImages_now">
+          <DataField>threeAltImages_now</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="gtZeroAltImages_now">
+          <DataField>gtZeroAltImages_now</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="collections_now">
+          <DataField>collections_now</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="accessories_now">
+          <DataField>accessories_now</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="coordItems_now">
+          <DataField>coordItems_now</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="reviews_now">
+          <DataField>reviews_now</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="ssku_now">
+          <DataField>ssku_now</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="brand_start">
+          <DataField>brand_start</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="salientBullets_start">
+          <DataField>salientBullets_start</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="threeAltImages_start">
+          <DataField>threeAltImages_start</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="gtZeroAltImages_start">
+          <DataField>gtZeroAltImages_start</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="collections_start">
+          <DataField>collections_start</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="accessories_start">
+          <DataField>accessories_start</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="coordItems_start">
+          <DataField>coordItems_start</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="reviews_start">
+          <DataField>reviews_start</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
+        </Field>
+        <Field Name="ssku_start">
+          <DataField>ssku_start</DataField>
           <rd:TypeName>System.Int32</rd:TypeName>
         </Field>
       </Fields>
@@ -1144,11 +1423,41 @@ ORDER BY [DEPT LEVEL VIEW BANDING]</CommandText>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!ID__ITEMS_W____0_ALT_IMAGES.Value/Fields!TOTAL_ITEMS.Value</Value>
+                                  <Value>=Fields!gtZeroAltImages_now.Value/Fields!TOTAL_ITEMS.Value</Value>
                                   <Style>
                                     <FontFamily>Tahoma</FontFamily>
                                     <Format>0.00%</Format>
-                                    <Color>=IIF(Me.Value&lt; .5, "Red", "Green")</Color>
+                                  </Style>
+                                </TextRun>
+                                <TextRun>
+                                  <Value> (</Value>
+                                  <Style>
+                                    <FontFamily>Tahoma</FontFamily>
+                                    <Format>0.00%</Format>
+                                  </Style>
+                                </TextRun>
+                                <TextRun>
+                                  <Value>=IIF(Fields!gtZeroAltImagesPerc.Value&gt; 0, "+","")</Value>
+                                  <Style>
+                                    <FontFamily>Tahoma</FontFamily>
+                                    <Format>0.00%</Format>
+                                    <Color>Green</Color>
+                                  </Style>
+                                </TextRun>
+                                <TextRun>
+                                  <Value>=Fields!gtZeroAltImagesPerc.Value</Value>
+                                  <Style>
+                                    <FontFamily>Tahoma</FontFamily>
+                                    <Format>0.00%</Format>
+                                    <Color>=IIf(Me.Value&lt;=-.0001, "Red", IIf(Me.Value &gt;.0001, "Green", "Black"))</Color>
+                                  </Style>
+                                </TextRun>
+                                <TextRun>
+                                  <Value>)</Value>
+                                  <Style>
+                                    <FontFamily>Tahoma</FontFamily>
+                                    <Format>0.00%</Format>
+                                    <Color>=IIf(Me.Value&lt;=0, "Red", "Green")</Color>
                                   </Style>
                                 </TextRun>
                               </TextRuns>
@@ -1180,7 +1489,7 @@ ORDER BY [DEPT LEVEL VIEW BANDING]</CommandText>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!ID__ITEMS_W_____3_ALT_IMAGES.Value/Fields!TOTAL_ITEMS.Value</Value>
+                                  <Value>=Fields!threeAltImages_now.Value/Fields!TOTAL_ITEMS.Value</Value>
                                   <Style>
                                     <FontFamily>Tahoma</FontFamily>
                                     <Format>0.00%</Format>
@@ -1216,7 +1525,7 @@ ORDER BY [DEPT LEVEL VIEW BANDING]</CommandText>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!NO__ITEMS_WITH_COLLECTIONS.Value/Fields!TOTAL_ITEMS.Value</Value>
+                                  <Value>=Fields!collections_now.Value/Fields!TOTAL_ITEMS.Value</Value>
                                   <Style>
                                     <FontFamily>Tahoma</FontFamily>
                                     <Format>0.00%</Format>
@@ -1252,7 +1561,7 @@ ORDER BY [DEPT LEVEL VIEW BANDING]</CommandText>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!NO__ITEMS_WITH_ACCESSORIES.Value/Fields!TOTAL_ITEMS.Value</Value>
+                                  <Value>=Fields!accessories_now.Value/Fields!TOTAL_ITEMS.Value</Value>
                                   <Style>
                                     <FontFamily>Tahoma</FontFamily>
                                     <Format>0.00%</Format>
@@ -1288,7 +1597,7 @@ ORDER BY [DEPT LEVEL VIEW BANDING]</CommandText>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!NO__ITEMS_WITH_COORDINATING_ITEMS.Value/Fields!TOTAL_ITEMS.Value</Value>
+                                  <Value>=Fields!coordItems_now.Value/Fields!TOTAL_ITEMS.Value</Value>
                                   <Style>
                                     <FontFamily>Tahoma</FontFamily>
                                     <Format>0.00%</Format>
@@ -1324,7 +1633,7 @@ ORDER BY [DEPT LEVEL VIEW BANDING]</CommandText>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!NO__ITEMS_W__SALIENT_BULLETS.Value/Fields!TOTAL_ITEMS.Value</Value>
+                                  <Value>=Fields!salientBullets_now.Value/Fields!TOTAL_ITEMS.Value</Value>
                                   <Style>
                                     <FontFamily>Tahoma</FontFamily>
                                     <Format>0.00%</Format>
@@ -1360,7 +1669,7 @@ ORDER BY [DEPT LEVEL VIEW BANDING]</CommandText>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!NO__OF_ITEMS_WITH_BRAND.Value/Fields!TOTAL_ITEMS.Value</Value>
+                                  <Value>=Fields!brand_now.Value/Fields!TOTAL_ITEMS.Value</Value>
                                   <Style>
                                     <FontFamily>Tahoma</FontFamily>
                                     <Format>0.00%</Format>
@@ -1396,7 +1705,7 @@ ORDER BY [DEPT LEVEL VIEW BANDING]</CommandText>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!NO__ITEMS_SUPER_SKUD.Value/Fields!TOTAL_ITEMS.Value</Value>
+                                  <Value>=Fields!ssku_now.Value/Fields!TOTAL_ITEMS.Value</Value>
                                   <Style>
                                     <FontFamily>Tahoma</FontFamily>
                                     <Format>0.00%</Format>
@@ -1432,7 +1741,7 @@ ORDER BY [DEPT LEVEL VIEW BANDING]</CommandText>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!NO__ITEMS_WITH_REVIEWS.Value/Fields!TOTAL_ITEMS.Value</Value>
+                                  <Value>=Fields!reviews_now.Value/Fields!TOTAL_ITEMS.Value</Value>
                                   <Style>
                                     <FontFamily>Tahoma</FontFamily>
                                     <Format>0.00%</Format>
