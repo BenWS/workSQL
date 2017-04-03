@@ -1,0 +1,395 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Report xmlns:rd="http://schemas.microsoft.com/SQLServer/reporting/reportdesigner" xmlns:cl="http://schemas.microsoft.com/sqlserver/reporting/2010/01/componentdefinition" xmlns="http://schemas.microsoft.com/sqlserver/reporting/2010/01/reportdefinition">
+  <AutoRefresh>0</AutoRefresh>
+  <DataSources>
+    <DataSource Name="DataStandards">
+      <ConnectionProperties>
+        <DataProvider>SQL</DataProvider>
+        <ConnectString>server=WAPRCN026A;</ConnectString>
+        <Prompt>Specify a user name and password for data source DataStandards:</Prompt>
+      </ConnectionProperties>
+      <rd:SecurityType>Windows</rd:SecurityType>
+      <rd:DataSourceID>b13539cf-7b77-4832-85ef-2d0cb7cacbe6</rd:DataSourceID>
+    </DataSource>
+  </DataSources>
+  <DataSets>
+    <DataSet Name="MonaQuery">
+      <Query>
+        <DataSourceName>DataStandards</DataSourceName>
+        <CommandText>USE STEP_MVIEWS
+
+
+IF object_id('tempdb..#TEMP1', 'U') is not null
+       DROP TABLE [#TEMP1]
+IF object_id('tempdb..#TMP_STANDARDS', 'U') is not null
+       DROP TABLE [#TMP_STANDARDS]
+IF object_id('tempdb..#TEMP2', 'U') is not null
+       DROP TABLE [#TEMP2]
+
+CREATE TABLE #TMP_STANDARDS(
+       [DataStandardsID] [int] NULL,
+       [Sequence] [int] NULL,
+       [ProductNameTitle] [varchar](400) NULL,
+       [ProductNameFormula] [varchar](500) NULL,
+       [ProductNameExample] [varchar](500) NULL
+)
+
+IF CURSOR_STATUS('global','C1')&gt;=-1
+BEGIN
+DEALLOCATE C1
+END
+
+/****** Script for SelectTopNRows command from SSMS  ******/
+
+DECLARE @EXAMPLETEXT VARCHAR(4000),
+              @DID INT, 
+              @SEQ INT
+
+--DECLARE YOUR CURSOR
+DECLARE C1 CURSOR FAST_FORWARD 
+FOR 
+--THIS IS THE SQL THAT DRIVES YOUR CURSOR
+SELECT [ProductNameExample],[DataStandardsID],   [Sequence]
+  FROM [Data Standards].[dbo].[FormulaExample] A
+
+
+--"OPEN" OR INITIALIZE YOUR CURSOR HERE
+OPEN C1 
+FETCH NEXT FROM C1 INTO @EXAMPLETEXT, @DID, @SEQ
+
+--LOOP THROUGH THE RESULTS OF YOUR CURSOR STATEMENT ONE ROW AT A TIME.
+WHILE @@FETCH_STATUS=0
+BEGIN 
+
+       --DO STUFF ON EACH ROW HERE
+       
+       INSERT INTO #TMP_STANDARDS
+       SELECT A.[DataStandardsID]
+      ,A.[Sequence]
+      ,A.[ProductNameTitle]
+      ,A.[ProductNameFormula],  B.items  
+    
+  FROM [Data Standards].[dbo].[FormulaExample] A,
+       dbo.SplitDC(@EXAMPLETEXT,CHAR(13)) B     
+       WHERE A.[DataStandardsID]=@DID
+       AND A.SEQUENCE=@SEQ
+       AND RTRIM(LTRIM(B.items))&lt;&gt; CHAR(9)
+       
+       --THIS LINE ALLOWS YOU TO ITERATE THROUGH RESULTS. 
+       -- INFINITE LOOP IF THIS LINE IS MISSING.
+       FETCH NEXT FROM C1 INTO @EXAMPLETEXT, @DID, @SEQ
+       
+END 
+--CLOSE YOUR CURSOR, aka RELEASE THE MEMORY ON THE SERVER
+CLOSE C1
+DEALLOCATE C1
+
+ 
+ 
+SELECT [DataStandardsID]
+      ,[Sequence]
+      ,[ProductNameTitle]
+      ,[ProductNameFormula],
+     REPLACE([ProductNameExample], char(10), '') as ProductNameExample
+     
+
+INTO #TEMP1
+FROM #TMP_STANDARDS
+WHERE LEN(PRODUCTNAMEEXAMPLE)&gt;1
+ORDER BY DATASTANDARDSID, SEQUENCE
+
+
+
+
+SELECT DS.GuidID AS '&lt;ID&gt;', 
+'a40be0d3-5c49-446d-a835-ef6af29c016e{Product Name (120)}:' + REPLACE(REPLACE(T1.[ProductNameFormula], CHAR(10), ' '), CHAR(13), '') + '|' + REPLACE(REPLACE(T1.[ProductNameExample], CHAR(10), ' '), CHAR(13), '') AS 'Attribute Data Quality',
+
+ROW_NUMBER() OVER (
+         PARTITION BY DS.GuidID
+         ORDER BY LEN(T1.[ProductNameExample]) DESC
+         ) RN
+         
+
+  INTO #TEMP2
+  FROM [Data Standards].[dbo].[CollectionCategories] DS
+
+  LEFT OUTER JOIN #TEMP1 T1 ON T1.[DataStandardsID] = DS.DataStandardsID 
+  AND T1.[Sequence] = CAST(RTRIM(LTRIM(DS.FormulaExampleSequence)) AS INT)
+  
+  WHERE T1.[ProductNameFormula] IS NOT NULL
+ORDER BY DS.GuidID
+
+SELECT [&lt;ID&gt;], 
+[Attribute Data Quality]
+--INTO [ZZTEMPPLAYGROUND].[dbo].[DATA_STANDARDS_IMPORT]
+FROM #TEMP2
+WHERE RN = '1'
+
+
+IF object_id('tempdb..#TEMP1', 'U') is not null
+       DROP TABLE [#TEMP1]
+IF object_id('tempdb..#TMP_STANDARDS', 'U') is not null
+       DROP TABLE [#TMP_STANDARDS]
+IF object_id('tempdb..#TEMP2', 'U') is not null
+       DROP TABLE [#TEMP2]
+</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="ID_ID_">
+          <DataField>&lt;ID&gt;</DataField>
+          <rd:TypeName>System.String</rd:TypeName>
+        </Field>
+        <Field Name="Attribute_Data_Quality">
+          <DataField>Attribute Data Quality</DataField>
+          <rd:TypeName>System.String</rd:TypeName>
+        </Field>
+      </Fields>
+    </DataSet>
+  </DataSets>
+  <ReportSections>
+    <ReportSection>
+      <Body>
+        <ReportItems>
+          <Tablix Name="Tablix1">
+            <TablixBody>
+              <TablixColumns>
+                <TablixColumn>
+                  <Width>2.84375in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>7.83333in</Width>
+                </TablixColumn>
+              </TablixColumns>
+              <TablixRows>
+                <TablixRow>
+                  <Height>0.25in</Height>
+                  <TablixCells>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox7">
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>&lt;ID&gt;</Value>
+                                  <Style>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <rd:DefaultName>Textbox7</rd:DefaultName>
+                          <Style>
+                            <Border>
+                              <Color>LightGrey</Color>
+                              <Style>Solid</Style>
+                            </Border>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                        <rd:Selected>true</rd:Selected>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox1">
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>Attribute Data Quality</Value>
+                                  <Style>
+                                    <FontWeight>Bold</FontWeight>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <rd:DefaultName>Textbox1</rd:DefaultName>
+                          <Style>
+                            <Border>
+                              <Color>LightGrey</Color>
+                              <Style>Solid</Style>
+                            </Border>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                  </TablixCells>
+                </TablixRow>
+                <TablixRow>
+                  <Height>0.25in</Height>
+                  <TablixCells>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="ID_ID_">
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Fields!ID_ID_.Value</Value>
+                                  <Style />
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <rd:DefaultName>ID_ID_</rd:DefaultName>
+                          <Style>
+                            <Border>
+                              <Color>LightGrey</Color>
+                              <Style>Solid</Style>
+                            </Border>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Attribute_Data_Quality">
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Fields!Attribute_Data_Quality.Value</Value>
+                                  <Style />
+                                </TextRun>
+                              </TextRuns>
+                              <Style>
+                                <TextAlign>Center</TextAlign>
+                              </Style>
+                            </Paragraph>
+                          </Paragraphs>
+                          <rd:DefaultName>Attribute_Data_Quality</rd:DefaultName>
+                          <Style>
+                            <Border>
+                              <Color>LightGrey</Color>
+                              <Style>Solid</Style>
+                            </Border>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                  </TablixCells>
+                </TablixRow>
+              </TablixRows>
+            </TablixBody>
+            <TablixColumnHierarchy>
+              <TablixMembers>
+                <TablixMember />
+                <TablixMember />
+              </TablixMembers>
+            </TablixColumnHierarchy>
+            <TablixRowHierarchy>
+              <TablixMembers>
+                <TablixMember />
+                <TablixMember>
+                  <Group Name="Details" />
+                </TablixMember>
+              </TablixMembers>
+            </TablixRowHierarchy>
+            <DataSetName>MonaQuery</DataSetName>
+            <Height>0.5in</Height>
+            <Width>10.67708in</Width>
+            <Style>
+              <Border>
+                <Style>None</Style>
+              </Border>
+            </Style>
+          </Tablix>
+        </ReportItems>
+        <Height>7.32292in</Height>
+        <Style>
+          <Border>
+            <Style>None</Style>
+          </Border>
+        </Style>
+      </Body>
+      <Width>13.24084in</Width>
+      <Page>
+        <PageFooter>
+          <Height>5.80417in</Height>
+          <PrintOnFirstPage>true</PrintOnFirstPage>
+          <PrintOnLastPage>true</PrintOnLastPage>
+          <ReportItems>
+            <Textbox Name="ExecutionTime">
+              <CanGrow>true</CanGrow>
+              <KeepTogether>true</KeepTogether>
+              <Paragraphs>
+                <Paragraph>
+                  <TextRuns>
+                    <TextRun>
+                      <Value>=Globals!ExecutionTime</Value>
+                      <Style />
+                    </TextRun>
+                  </TextRuns>
+                  <Style>
+                    <TextAlign>Right</TextAlign>
+                  </Style>
+                </Paragraph>
+              </Paragraphs>
+              <rd:DefaultName>ExecutionTime</rd:DefaultName>
+              <Top>0.2in</Top>
+              <Left>4.24084in</Left>
+              <Height>0.25in</Height>
+              <Width>2in</Width>
+              <Style>
+                <Border>
+                  <Style>None</Style>
+                </Border>
+                <PaddingLeft>2pt</PaddingLeft>
+                <PaddingRight>2pt</PaddingRight>
+                <PaddingTop>2pt</PaddingTop>
+                <PaddingBottom>2pt</PaddingBottom>
+              </Style>
+            </Textbox>
+          </ReportItems>
+          <Style>
+            <Border>
+              <Style>None</Style>
+            </Border>
+          </Style>
+        </PageFooter>
+        <LeftMargin>1in</LeftMargin>
+        <RightMargin>1in</RightMargin>
+        <TopMargin>1in</TopMargin>
+        <BottomMargin>1in</BottomMargin>
+        <Style />
+      </Page>
+    </ReportSection>
+  </ReportSections>
+  <rd:ReportUnitType>Inch</rd:ReportUnitType>
+  <rd:ReportID>7dc4cc9f-a963-4b77-8437-5e3ec193b853</rd:ReportID>
+</Report>
