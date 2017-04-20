@@ -6,7 +6,6 @@
       <ConnectionProperties>
         <DataProvider>SQL</DataProvider>
         <ConnectString>Data Source=WAPRCN026A</ConnectString>
-        <Prompt>Enter a user name and password to access the data source:</Prompt>
       </ConnectionProperties>
       <rd:SecurityType>Windows</rd:SecurityType>
       <rd:DataSourceID>3bd82d5e-650b-402c-bd6e-b4b26a7aa966</rd:DataSourceID>
@@ -2030,7 +2029,6 @@ order by [product idm account name] asc</CommandText>
     <ReportParameter Name="vendorname">
       <DataType>String</DataType>
       <Prompt>vendorname</Prompt>
-      <Hidden>true</Hidden>
     </ReportParameter>
   </ReportParameters>
   <rd:ReportUnitType>Inch</rd:ReportUnitType>
