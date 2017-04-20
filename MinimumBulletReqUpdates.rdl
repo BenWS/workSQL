@@ -5,7 +5,7 @@
     <DataSource Name="DataStandards">
       <ConnectionProperties>
         <DataProvider>SQL</DataProvider>
-        <ConnectString>Data Source=WAPRCN026A</ConnectString>
+        <ConnectString>Data Source=WAPRCN026A; database=data standards;</ConnectString>
         <Prompt>Type or enter a user name and password to access the data source:</Prompt>
       </ConnectionProperties>
       <rd:SecurityType>Windows</rd:SecurityType>
@@ -16,29 +16,56 @@
     <DataSet Name="DSChanges">
       <Query>
         <DataSourceName>DataStandards</DataSourceName>
-        <CommandText>select cc.guidID, Prev_value, New_value
-from [data standards].dbo.DataStandards_Change_history dsh
-	inner join [data standards].dbo.collectionCategories cc
-		on cc.dataStandardsID = dsh.dataStandardsID
-	inner join [data standards].dbo.IDMCollectionSetup idm
-		on idm.GUIDID = cc.guidID
-where cast(changeDateTime as date) = cast(Dateadd(day,-1, Getdate()) as date)
-	and change_type = 'MIN_REQ_BULLET_UPDATE'
-	and branchLeaf = 'L'</CommandText>
+        <CommandText>-- select guidID, current Bullet Value, previous Bullet Value
+-- where changes occurred yesterday
+
+if object_id('tempDB..#current', 'u') is not null
+	drop table #current
+
+if object_id('tempDB..#prev', 'u') is not null
+	drop table #prev
+
+declare @dt datetime
+set @dt = getdate()
+
+-- getting dataStandards from today
+select dsid, minimumRequiredBullet 
+into #current
+from datastandards_history
+where datediff(dd,@dt,backupdatetime) = 0
+
+--getting dataStandards from yesterday
+select dsid, minimumRequiredBullet 
+into #prev
+from datastandards_history
+where datediff(dd,@dt,backupdatetime) = -1
+
+
+-- comparing today's dataStandards with yesterday's
+select 
+	guidID [GUID ID], 
+	#current.minimumRequiredBullet [New Value], 
+	#prev.minimumRequiredBullet [Prev Value]
+from #current
+	inner join #prev
+		on #current.dsid = #prev.dsid
+	inner join collectionCategories cc
+		on cc.dataStandardsID = #current.dsid
+where #current.minimumRequiredBullet &lt;&gt; #prev.minimumRequiredBullet</CommandText>
         <Timeout>180</Timeout>
       </Query>
       <Fields>
-        <Field Name="guidID">
-          <DataField>guidID</DataField>
+        <Field Name="GUID_ID">
+          <DataField>GUID ID</DataField>
           <rd:TypeName>System.String</rd:TypeName>
         </Field>
-        <Field Name="Prev_value">
-          <DataField>Prev_value</DataField>
-          <rd:TypeName>System.String</rd:TypeName>
+        <Field Name="New_Value">
+          <DataField>New Value</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
         </Field>
-        <Field Name="New_value">
-          <DataField>New_value</DataField>
-          <rd:TypeName>System.String</rd:TypeName>
+        <Field Name="Prev_Value">
+          <DataField>Prev Value</DataField>
+          <rd:TypeName>System.Int32</rd:TypeName>
         </Field>
       </Fields>
     </DataSet>
@@ -176,14 +203,14 @@ where cast(changeDateTime as date) = cast(Dateadd(day,-1, Getdate()) as date)
                   <TablixCells>
                     <TablixCell>
                       <CellContents>
-                        <Textbox Name="guidID">
+                        <Textbox Name="GUID_ID">
                           <CanGrow>true</CanGrow>
                           <KeepTogether>true</KeepTogether>
                           <Paragraphs>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!guidID.Value</Value>
+                                  <Value>=Fields!GUID_ID.Value</Value>
                                   <Style />
                                 </TextRun>
                               </TextRuns>
@@ -192,7 +219,7 @@ where cast(changeDateTime as date) = cast(Dateadd(day,-1, Getdate()) as date)
                               </Style>
                             </Paragraph>
                           </Paragraphs>
-                          <rd:DefaultName>guidID</rd:DefaultName>
+                          <rd:DefaultName>GUID_ID</rd:DefaultName>
                           <Style>
                             <Border>
                               <Color>LightGrey</Color>
@@ -215,7 +242,7 @@ where cast(changeDateTime as date) = cast(Dateadd(day,-1, Getdate()) as date)
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!Prev_value.Value</Value>
+                                  <Value>=Fields!New_Value.Value</Value>
                                   <Style />
                                 </TextRun>
                               </TextRuns>
@@ -240,14 +267,14 @@ where cast(changeDateTime as date) = cast(Dateadd(day,-1, Getdate()) as date)
                     </TablixCell>
                     <TablixCell>
                       <CellContents>
-                        <Textbox Name="New_value">
+                        <Textbox Name="Prev_Value">
                           <CanGrow>true</CanGrow>
                           <KeepTogether>true</KeepTogether>
                           <Paragraphs>
                             <Paragraph>
                               <TextRuns>
                                 <TextRun>
-                                  <Value>=Fields!New_value.Value</Value>
+                                  <Value>=Fields!Prev_Value.Value</Value>
                                   <Style />
                                 </TextRun>
                               </TextRuns>
@@ -256,7 +283,7 @@ where cast(changeDateTime as date) = cast(Dateadd(day,-1, Getdate()) as date)
                               </Style>
                             </Paragraph>
                           </Paragraphs>
-                          <rd:DefaultName>New_value</rd:DefaultName>
+                          <rd:DefaultName>Prev_Value</rd:DefaultName>
                           <Style>
                             <Border>
                               <Color>LightGrey</Color>
