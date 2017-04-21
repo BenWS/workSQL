@@ -43,7 +43,7 @@ where datediff(dd,@dt,backupdatetime) = -1
 
 -- comparing today's dataStandards with yesterday's
 select 
-	guidID [GUID ID], 
+	cc.guidID [GUID ID], 
 	#current.minimumRequiredBullet [New Value], 
 	#prev.minimumRequiredBullet [Prev Value]
 from #current
@@ -51,7 +51,10 @@ from #current
 		on #current.dsid = #prev.dsid
 	inner join collectionCategories cc
 		on cc.dataStandardsID = #current.dsid
-where #current.minimumRequiredBullet &lt;&gt; #prev.minimumRequiredBullet</CommandText>
+	inner join idmCollectionSetup idm
+		on idm.guidID = cc.guidID
+where #current.minimumRequiredBullet &lt;&gt; #prev.minimumRequiredBullet
+	and branchLeaf = 'L'</CommandText>
         <Timeout>180</Timeout>
       </Query>
       <Fields>
